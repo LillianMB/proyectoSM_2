@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grupos</title>
+    
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
+
+    <style>
+        .bg-cute-Maestro-de-Scrum {
+            background-color: #fbe8ec !important; /* rojo suave cute */
+            color: #990f28;
+        }
+
+        .bg-cute-Desarrollador-1 {
+            background-color: #d5f5f9 !important; /* verde menta bonito */
+            color: #03506f;
+        }
+
+        .bg-cute-Desarrollador-2 {
+            background-color: #eafdc8 !important; /* verde lima pastel */
+            color: #3d8a24;
+        }
+
+        .bg-cute-Propietario-del-Producto {
+            background-color: #fffbe0 !important; /* amarillo pastel */
+            color: #9a6b00;
+        }
+
+        .bg-cute-Todos {
+            background-color: #f0f0f0 !important;
+            color: #333;
+        }
+
+        .bg-cute{
+            border-radius: 12px;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .navbar {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+        }
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            margin-right: 15px;
+        }
+        .section {
+            margin: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        #calendar {
+            max-width: 100%;
+            margin: 0 auto;
+            min-height: 520px;
+        }
+        .modal-content {
+            padding: 20px;
+        }
+        .hidden {
+            display: none;
+        }
+        .grafica-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .grafica {
+            width: 100%; /* Reducir el tamaño del contenedor */
+            height: auto; /* Mantener la proporción */
+        }
+        .logout-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
+    </style>
+</head>
+<body>
+
+          <!-- Menú de navegación -->
+          <div class="navbar">
+            <a href="#Grafica"><i class="bi bi-clipboard-data"></i> Gráfica</a>
+            <a href="#calendario"><i class="bi bi-calendar4-week"></i> Calendario</a>
+            <a href="#Equipo"><i class="bi bi-people"></i> Mi equipo</a>
+            <a href="#Actividades"><i class="bi bi-card-checklist"></i> Actividades</a>
+            <div class="dropdown">
+                <button class="btn btn-primary dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" id="boton_notificaciones"><i class="bi bi-bell"></i> 
+                  Notificaciones <span id="cantNotif"></span>
+                </button>
+                <div class="dropdown-menu" id="notificaciones_lista">
+                </div>
+            </div>
+            <!-- Botón de Cerrar Sesión -->
+            <a href="#CerrarSesion"><button class="btn btn-secondary logout-btn" onclick="cerrar_sesion()">Cerrar Sesión</button></a>
+        </div>
+
+    <div class="container mt-4">
+        <div class="row justify-content-center">
+            <div class="col-lg-6">
+                <div class="container mt-4 text-center" style="font-size: 25px;">
+                    <div class="row"><div class="col">Bienvenido, {{ usuario.username }}</div></div>
+                    <div class="row"><div class="col">Correo: {{ usuario.email }}</div></div>
+                    <div class="row"><div class="col">Rol:
+                            {% if usuario.rol %}
+                                {{ usuario.rol }}
+                            {% else %}
+                                No tienes rol asignado.
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row"><div class="col">Equipo: 
+                            {% if equipo %}
+                                {{ equipo.Nombre }}
+                            {% else %}
+                                No tienes equipo asignado.
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="container mt-4">
+                    <div class="grafica" id="Grafica">
+                        <canvas id="graficaPastel"></canvas>
+                    </div>
+                </div>
+                <div class="container mt-4">
+                    <ul class="list-group list-group-horizontal-sm">
+                        <li class="list-group-item bg-cute-Maestro-de-Scrum">Maestro de Scrum</li>
+                        <li class="list-group-item bg-cute-Desarrollador-1">Desarrollador 1</li>
+                        <li class="list-group-item bg-cute-Desarrollador-2">Desarrollador 2</li>
+                        <li class="list-group-item bg-cute-Propietario-del-Producto">Propietario del Producto</li>
+                      </ul>
+                </div>
+                {% if usuario.rol == "Maestro de Scrum" %}
+                <div class="container mt-4">
+                    <button class="btn btn-outline-primary col-12 mt-2" onclick="resetActividadForm()"><i class="bi bi-card-checklist"></i> Agregar Actividad</button>
+                </div>
+                {% endif %}
+                
+
+                <div class="container mt-4">
+                    <div class="row">
+                      <div class="col border">
+                        <h4>Por hacer</h4>
+                        <div id="todo" class="p-2 min-vh-50"></div>
+                      </div>
+                      <div class="col border">
+                        <h4>En progreso</h4>
+                        <div id="inprogress" class="p-2 min-vh-50"></div>
+                      </div>
+                      <div class="col border">
+                        <h4>Finalizado</h4>
+                        <div id="done" class="p-2 min-vh-50"></div>
+                      </div>
+                    </div>
+                  </div>
+
+            </div>
+            <div class="col-lg-6">
+                <h2> <i class="bi bi-calendar4-week"></i> Calendario</h2>
+                <div id="calendario" class="section">
+                    
+                    <div id="calendar"></div>
+                </div>
+
+                <div class="col-lg-12">
+                    <h6 id="Actividades" ><i class="bi bi-card-checklist"></i>Actividades</h6>
+                    <table class="table table-striped table-hoover">
+                        <tr>
+                            <th>Actividad</th>
+                            <th>Fecha límite</th>
+                            <th>Hora límite</th>
+                            <th>Subir/Bajar</th>
+                            <th>Calificación</th>
+                            <th>Descripción</th>
+                        </tr>
+                        <tbody>
+                            {% for evento in calendario %}
+                            <tr class="{{evento.bg_color }}">
+                                <td>{{ evento.idActividad.Nombre }}</td>
+                                <td>{{ evento.Fecha_limite }}</td>
+                                <td>{{ evento.idActividad.hora_limite }} : 00</td>
+                                <td>
+                                {% if evento.calificacion == None %}
+                                    {% if evento.puede_subir and  usuario.rol == evento.idActividad.ro_responsable or evento.idActividad.ro_responsable == "Todos" %}
+                                        <button class="btn btn-outline-secondary btnSubirTarea col-12" data-id="{{ evento.idActividad.id }}"> 
+                                            Subir Tarea <i class="bi bi-upload"></i>
+                                        </button>
+                                    {% endif %}
+                                {% else %}
+                                    <button class="btn btn-outline-secondary col-12" onclick="descargarArchivo({{ evento.calificacion.id }})">Descargar <i class="bi bi-download"></i></button>
+                                {% endif %}
+                                </td>
+                                <td>
+                                    {% if not evento.calificacion and evento.Fecha_limite < today %}
+                                        Vencida
+                                    {% else %}
+                                        {{ evento.calificacion.Calificacion }}
+                                    {% endif %}
+                                </td>
+                                
+                                <td>{{ evento.calificacion.descripcion_tarea }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+   
+
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="container mt-4">
+                <!-- Tabla de usuarios del equipo -->
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <td id="Equipo" colspan="3" class="text-center"><h6><i class="bi bi-people"></i> Mi Equipo</h6></td>
+                        </tr>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Correo</th>
+                            <th>Rol</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for usuario in usuarios_equipo %}
+                            <tr class="{{usuario.bg_color}}">
+                                <td>{{ usuario.username }}</td>
+                                <td>{{ usuario.email }}</td>
+                                <td>{{ usuario.rol }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center">No hay usuarios en el equipo.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="modal fade" id="modalSubirTarea" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-upload"></i> Subir Tarea</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal">x</button>
+                </div>
+                <div class="modal-body">
+                    <form id="formSubirTarea">
+                        <div class="form-group">
+                            <label>Descripción:</label>
+                            <textarea type="text" class="form-control" id="descripcion_tarea" required rows="7"></textarea>
+                        </div>
+
+                        <input type="hidden" id="actividadId">
+                        <div id="contenedorArchivo">
+                            <label>Selecciona un archivo:</label>
+                            <input type="file" class="form-control" id="archivo">
+                        </div>
+                        <div id="contenedorQuizz" class="d-none">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Pregunta</th>
+                                        <th>Respuestas</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tablaPreguntas"></tbody>
+                            </table>
+                        </div>
+                        <button type="submit" class="btn btn-outline-success mt-3">Guardar</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="actividadModal" tabindex="-1" role="dialog" aria-labelledby="actividadModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="actividadModalLabel">Detalles de la Actividad</h5>
+              <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+            <div class="modal-body">
+              <h4 id="actividadNombre"></h4>
+              <textarea class="form-control" id="actividadDescripcion" readonly  rows="25" style="max-height: 500px; overflow-y: auto; resize: none;"></textarea>
+              
+              <!-- Tabla de preguntas y respuestas -->
+              <table class="table" id="tabla_presguntas_respuestas">
+                <thead>
+                  <tr>
+                    <th>Pregunta</th>
+                    <th>Respuestas</th>
+                  </tr>
+                </thead>
+                <tbody id="actividadPreguntas">
+                  <!-- Aquí se llenarán las preguntas y respuestas -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+      
+    <div class="modal fade" id="agregar_actividad_modal" tabindex="-1" role="dialog" aria-labelledby="agregarActividadLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="agregarActividadLabel">Agregar Actividad</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="actividadForm">
+                        <div class="form-group">
+                            <label>Nombre de Actividad</label>
+                            <input type="text" class="form-control" id="nombre_actividad" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Objetivo</label>
+                            <textarea class="form-control" id="objetivo_actividad" required></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Rol responsable:</label>
+                            <select class="form-control" id="ro_responsable" required>
+                                <option value="Propietario del Producto">Propietario del Producto</option>
+                                <option value="Desarrollador 1">Desarrollador 1</option>
+                                <option value="Desarrollador 2">Desarrollador 2</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Fecha de Actividad:</label>
+                            <input type="date" class="form-control" id="fechaActividad" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Hora Límite:</label>
+                            <select class="form-control" id="hora_limite" required>
+                                <option value="0">12:00 AM</option>
+                                <option value="1">1:00 AM</option>
+                                <option value="2">2:00 AM</option>
+                                <option value="3">3:00 AM</option>
+                                <option value="4">4:00 AM</option>
+                                <option value="5">5:00 AM</option>
+                                <option value="6">6:00 AM</option>
+                                <option value="7">7:00 AM</option>
+                                <option value="8">8:00 AM</option>
+                                <option value="9">9:00 AM</option>
+                                <option value="10">10:00 AM</option>
+                                <option value="11">11:00 AM</option>
+                                <option value="12">12:00 PM</option>
+                                <option value="13">1:00 PM</option>
+                                <option value="14">2:00 PM</option>
+                                <option value="15">3:00 PM</option>
+                                <option value="16">4:00 PM</option>
+                                <option value="17">5:00 PM</option>
+                                <option value="18">6:00 PM</option>
+                                <option value="19">7:00 PM</option>
+                                <option value="20">8:00 PM</option>
+                                <option value="21">9:00 PM</option>
+                                <option value="22">10:00 PM</option>
+                                <option value="23">11:00 PM</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Descripción</label>
+                            <textarea class="form-control" id="descripcion_actividad" required></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Tipo de Actividad</label><br>
+                            <input type="radio" name="tipo_actividad" value="Actividad" checked onclick="toggleQuizz(false)"> Actividad
+                            <input type="radio" name="tipo_actividad" value="Quizz" onclick="toggleQuizz(true)"> Examen
+                        </div>
+                        <div id="quizz_section" style="display: none;">
+                            <button type="button" class="btn btn-info mb-2" onclick="agregarPregunta()">Agregar Pregunta</button>
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Pregunta</th>
+                                        <th>Respuestas</th>
+                                        <th>Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="preguntasTable"></tbody>
+                            </table>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-dismiss="modal" onclick="cerrar_modal('#agregar_actividad_modal')">Cerrar</button>
+                    <button type="button" class="btn btn-outline-primary" onclick="guardarActividad()" id="btn-guardarActividad">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/es.min.js"></script>
+    <!-- Bootstrap JS para los modales -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        $("#boton_notificaciones").on("click", function () {
+            $.ajax({
+                url: "/marcar_notificaciones_como_vistas/",
+                method: "GET",
+                success: function (data) {
+                    $("#cantNotif").empty();
+                },
+                error: function () {
+                }
+            });
+        });
+
+        function toggleQuizz(show) {
+            document.getElementById("quizz_section").style.display = show ? "block" : "none";
+        }
+        
+        function resetActividadForm() {
+            $('#agregar_actividad_modal').modal('show');
+            document.getElementById("actividadForm").reset();
+            document.getElementById("preguntasTable").innerHTML = "";
+            toggleQuizz(false);
+            $("#btn-guardarActividad").attr("id-actividad", "");
+        }
+
+        function cerrar_modal(modal_a_cerrrar){
+        $(modal_a_cerrrar).modal("hide");
+    }
+        
+        function agregarPregunta() {
+            let id = Date.now();
+            let row = `
+                <tr id="pregunta_${id}">
+                    <td><input type="text" class="form-control" name="pregunta" required></td>
+                    <td>
+                        <div class="form-group">
+                            Respuesta correcta: <input type="radio" name="correcta_${id}" value="0"> <input type="text" class="form-control mb-1" name="respuesta_${id}">
+                            Respuesta correcta: <input type="radio" name="correcta_${id}" value="1"> <input type="text" class="form-control mb-1" name="respuesta_${id}">
+                            Respuesta correcta: <input type="radio" name="correcta_${id}" value="2"> <input type="text" class="form-control mb-1" name="respuesta_${id}">
+                        </div>
+                    </td>
+                    <td><button type="button" class="btn btn-danger" onclick="eliminarPregunta(${id})">X</button></td>
+                </tr>`;
+            document.getElementById("preguntasTable").insertAdjacentHTML("beforeend", row);
+        }
+
+        
+        function guardarActividad() {
+            let Nombre = document.getElementById("nombre_actividad").value;
+            let tipo = document.querySelector('input[name="tipo_actividad"]:checked').value;
+            let Descripcion = document.getElementById("descripcion_actividad").value;
+            let Fecha_limite = document.getElementById("fechaActividad").value;
+            let id = $("#btn-guardarActividad").attr("id-actividad");
+            let hora_limite = $("#hora_limite").val();
+            let objetivo_actividad = $("#objetivo_actividad").val();
+            let ro_responsable = $("#ro_responsable").val();
+
+            let preguntas = [];
+
+            if (tipo === "Quizz") {
+                document.querySelectorAll("#preguntasTable tr").forEach(tr => {
+                    let pregunta = tr.querySelector('input[name="pregunta"]').value;
+                    let respuestas = [...tr.querySelectorAll(`input[name^="respuesta_"]`)].map((r, index) => ({
+                        Texto: r.value,
+                        eslaCorrecta: tr.querySelector(`input[name^="correcta_"][value="${index}"]`).checked
+                    }));
+                    preguntas.push({ pregunta, respuestas });
+                });
+            }
+
+            let data = { Nombre, tipo, Descripcion, Fecha_limite, preguntas, id, objetivo_actividad, hora_limite, ro_responsable };
+
+            $.ajax({
+                url: "/agregar_actividad/",
+                method: "POST",
+                contentType: "application/json",
+                data: JSON.stringify(data),
+                success: function () {
+                    location.reload();
+                    alert("Actividad guardada");
+                    $('#agregar_actividad_modal').modal('hide');
+                    $('#agregar_actividad_modal').modal('hide');
+                },
+                error: function () {
+                    alert("Error al guardar la actividad");
+                }
+            });
+        }
+
+        function agregarPreguntaEdit(texto = '', respuestas = []) {
+        let id = Date.now();
+        let row = `
+            <tr id="pregunta_${id}">
+                <td><input type="text" class="form-control" name="pregunta" value="${texto}" required></td>
+                <td>
+                    <div class="form-group">`;
+
+        for (let i = 0; i < 3; i++) {
+            const respuestaTexto = respuestas[i]?.texto || '';
+            const checked = respuestas[i]?.eslaCorrecta ? 'checked' : '';
+            row += `
+                Respuesta correcta:
+                <input type="radio" name="correcta_${id}" value="${i}" ${checked}>
+                <input type="text" class="form-control mb-1" name="respuesta_${id}" value="${respuestaTexto}">`;
+        }
+
+        row += `
+                    </div>
+                </td>
+                <td><button type="button" class="btn btn-danger" onclick="eliminarPregunta(${id})">X</button></td>
+            </tr>`;
+
+        document.getElementById("preguntasTable").insertAdjacentHTML("beforeend", row);
+    }
+
+    function descargarArchivo(calificacionId) {
+    const url = `/descargar_archivo/?id=${calificacionId}`;
+    fetch(url)
+        .then(response => {
+            if (!response.ok) throw new Error('Error al descargar archivo.');
+            const disposition = response.headers.get('Content-Disposition');
+            let filename = `archivo_${calificacionId}`;
+            if (disposition && disposition.includes('filename=')) {
+                const match = disposition.match(/filename="?(.+?)"?$/);
+                if (match && match[1]) {
+                    filename = decodeURIComponent(match[1]);
+                }
+            }
+            return response.blob().then(blob => ({ blob, filename }));
+        })
+        .then(({ blob, filename }) => {
+            const urlBlob = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = urlBlob;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(urlBlob);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('No se pudo descargar el archivo.');
+        });
+}
+
+        function obtenerNotificaciones() {
+            $.ajax({
+                url: "/obtenerNotificaciones",
+                method: "GET",
+                success: function (data) {
+                    $("#notificaciones_lista").empty();
+                    $("#cantNotif").empty();
+                    
+                    var nuevas = data.filter(n => n.visto === false).length;
+
+                    if(data.length == 0){
+                        $("#notificaciones_lista").append(
+                            '<div style="border: 1px solid #ccc; padding: 10px; width: 400px;" class="dropdown-item">'+
+                            '<p>Sin notifiaciones</p>'+
+                            '</div>'
+                        );
+                    }
+                    else{
+                        
+                    if(nuevas > 0)
+                        $("#cantNotif").append("("+nuevas+")");
+                    
+                        data.forEach(function(notif) { 
+                            $("#notificaciones_lista").append(
+                                '<div style="border: 1px solid #ccc; padding: 10px; width: 400px;" class="dropdown-item">'+
+                                '<p>'+ notif.texto + '</p>'+
+                                '<small style="font-size: 0.8em; color: #555;">'+ notif.fechaEnvio + '</small>'+
+                                '</div>'
+                            );
+                        });
+                    }
+                },
+                error: function (error) {
+                    console.error("Error obteniendo notificaciones:", error);
+                }
+            });
+        }
+        obtenerNotificaciones();
+        setInterval(obtenerNotificaciones, 5000);
+        // Configuración de la gráfica de pastel
+        const ctx = document.getElementById('graficaPastel').getContext('2d');
+        const graficaPastel = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: ['{{Completado}}% Completado', '{{Restante}}% Restante'],
+                datasets: [{
+                    label: 'Porcentaje del cuso completado',
+                    data: [{{Completado}}, {{Restante}}],
+                    backgroundColor: [
+                        'rgba(54, 162, 235, 0.2)',
+                        'rgba(255, 99, 132, 0.2)'
+                    ],
+                    borderColor: [
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 99, 132, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                aspectRatio: 1.5, // Ajustar la proporción de la gráfica
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: true,
+                        text: 'Promedio de Calificaciones'
+                    }
+                }
+            }
+        });
+    
+        let calendar_global;
+        document.addEventListener("DOMContentLoaded", function () {
+        let calendarEl = document.getElementById("calendar");
+        calendar_global = new FullCalendar.Calendar(calendarEl, {
+            locale: 'es',
+            initialView: 'dayGridMonth',
+            events: function(info, successCallback, failureCallback) {
+                $.ajax({
+                    url: '/obtener_calendario/',
+                    data: {
+                        start: info.startStr,
+                        end: info.endStr
+                    },
+                    success: function(data) {
+                        successCallback(data);
+                    },
+                    error: function(error) {
+                        failureCallback(error);
+                    }
+                });
+            },
+            eventClick: function(info) {
+                var actividadId = info.event.id; // Obtén el ID de la actividad
+                $.ajax({
+                    url: '/obtener_actividad/',
+                    data: { id: actividadId }, // Envia el ID de la actividad
+                    success: function(data) {
+                        // Rellenar el modal con la información de la actividad
+                        $('#actividadNombre').text(data.nombre);
+                        $('#actividadDescripcion').text(data.descripcion);
+
+                        if(data.tipo == "Quizz")
+                            $("#tabla_presguntas_respuestas").show();
+                        else
+                            $("#tabla_presguntas_respuestas").hide();
+
+                        // Limpiar y agregar las preguntas y respuestas
+                        $('#actividadPreguntas').empty();
+                        data.preguntas.forEach(function(pregunta) {
+                            var fila = $('<tr>');
+                            var celdaPregunta = $('<td>').text(pregunta.texto);
+                            var celdaRespuestas = $('<td>');
+
+                            // Crear una lista de respuestas
+                            var listaRespuestas = $('<ul>');
+                            pregunta.respuestas.forEach(function(respuesta) {
+                                var item = $('<li>').text(respuesta.texto);
+                                listaRespuestas.append(item);
+                            });
+
+                            celdaRespuestas.append(listaRespuestas);
+                            fila.append(celdaPregunta, celdaRespuestas);
+                            $('#actividadPreguntas').append(fila);
+                        });
+
+                        // Mostrar el modal
+                        $('#actividadModal').modal('show');
+                    },
+                    error: function(error) {
+                        console.error('Error al obtener los detalles de la actividad:', error);
+                    }
+                });
+            }
+        });
+        calendar_global.render();
+    });
+
+    $(document).on('click', '.editar-btn', function () {
+        const id = $(this).data('id');
+        $("#btn-guardarActividad").attr("id-actividad", id);
+        $.ajax({
+            url: '/obtener_actividad/',
+            data: { id: id },
+            success: function (data) {
+                $('#nombre_actividad').val(data.nombre);
+                $('#descripcion_actividad').val(data.descripcion);
+                $('#fechaActividad').val(data.fecha_limite);
+                $('#hora_limite').val(data.hora_limite);
+                $('#objetivo_actividad').val(data.objetivo);
+                $('#ro_responsable').val(data.ro_responsable);
+
+                if (data.tipo === 'Quizz') {
+                    $('input[name="tipo_actividad"][value="Quizz"]').prop('checked', true);
+                    toggleQuizz(true);
+                } else {
+                    $('input[name="tipo_actividad"]f[value="Actividad"]').prop('checked', true);
+                    toggleQuizz(false);
+                }
+
+                // Limpiar tabla de preguntas
+                $('#preguntasTable').empty();
+
+                // Cargar preguntas y respuestas si es quizz
+                if (data.tipo === 'Quizz' && data.preguntas) {
+                    data.preguntas.forEach((pregunta, i) => {
+                        agregarPreguntaEdit(pregunta.texto, pregunta.respuestas);
+                    });
+                }
+
+                $('#agregar_actividad_modal').modal('show');
+            },
+            error: function (error) {
+                console.error("Error al obtener actividad:", error);
+            }
+        });
+    });
+
+
+        $(document).ready(function() {
+
+            $.get('/obtener_actividades', function(actividades) {
+                const today = new Date();
+
+                actividades.forEach(actividad => {
+                    const fechaLimite = new Date(actividad.fecha_limite);
+                    const diffDias = Math.ceil((fechaLimite - today) / (1000 * 60 * 60 * 24));
+
+                    let bgClass = 'bg-cute-' + actividad.ro_responsable.replaceAll(' ', '-');
+
+                    var boton_editar = "";
+                    if(actividad.ro_responsable != "Todos" && actividad.ro_responsable != "{{usuario.rol}}")
+                        boton_editar = `<button class="btn btn-sm btn-outline-dark editar-btn" data-id="${actividad.id}"><i class="bi bi-pencil"></i></button>`;
+
+                    const card = `
+                        <div class="card mb-2 ${bgClass} bg-cute">
+                            <div class="card-body p-2">
+                                <h5 class="card-title mb-1">${actividad.Nombre}</h5>
+                                <p class="card-text small">${actividad.tipo} - ${actividad.fecha_limite}</p>
+                                <p class="card-text small">Rol Responsable - ${actividad.ro_responsable}</p>
+                                ${boton_editar}
+                            </div>
+                        </div>
+                    `;
+
+                    if (actividad.calificacion != null) {
+                        $('#done').append(card);
+                    } else if (diffDias > 7) {
+                        $('#todo').append(card);
+                    } else if (diffDias >= 0 && diffDias <= 7) {
+                        $('#inprogress').append(card);
+                    } else {
+                        $('#done').append(card);
+                    }
+                });
+
+            });
+
+            
+            $(".btnSubirTarea").click(function() {
+                let actividadId = $(this).data("id");
+                $("#actividadId").val(actividadId);
+                $.get("/obtener_actividad/", { id: actividadId }, function(data) {
+                    if (data.tipo === "Quizz") {
+                        $("#contenedorArchivo").addClass("d-none");
+                        $("#contenedorQuizz").removeClass("d-none");
+                        let html = "";
+                        data.preguntas.forEach(pregunta => {
+                            html += `<tr>
+                                        <td>${pregunta.texto}</td>
+                                        <td>`;
+                            pregunta.respuestas.forEach(respuesta => {
+                                html += `<div class="form-check">
+                                            <input class="form-check-input" type="radio" name="pregunta_${pregunta.id}" value="${respuesta.id}">
+                                            <label class="form-check-label">${respuesta.texto}</label>
+                                        </div>`;
+                            });
+                            html += `</td></tr>`;
+                        });
+                        $("#tablaPreguntas").html(html);
+                    } else {
+                        $("#contenedorArchivo").removeClass("d-none");
+                        $("#contenedorQuizz").addClass("d-none");
+                    }
+                    $("#modalSubirTarea").modal("show");
+                });
+            });
+
+            $("#formSubirTarea").submit(function(e) {
+                e.preventDefault();
+                let actividadId = $("#actividadId").val();
+                let formData = new FormData();
+                formData.append("idActividad", actividadId);
+
+                if (!$("#contenedorQuizz").hasClass("d-none")) {
+                    let respuestas = [];
+                    $("#tablaPreguntas input[type='radio']:checked").each(function() {
+                        respuestas.push({ idPregunta: $(this).attr("name").split("_")[1], idRespuesta: $(this).val() });
+                    });
+                    formData.append("respuestas", JSON.stringify(respuestas));
+                } else {
+                    let archivo = $("#archivo")[0].files[0];
+                    if (archivo) {
+                        formData.append("archivo", archivo);
+                        formData.append("descripcion_tarea", $("#descripcion_tarea").val());
+                    }
+                }
+
+                $.ajax({
+                    url: "/guardar_tarea/",
+                    type: "POST",
+                    data: formData,
+                    contentType: false,
+                    processData: false,
+                    success: function() {
+                        $("#modalSubirTarea").modal("hide");
+                        location.reload();
+                    }
+                });
+            });
+        });
+
+            // Función para cerrar sesión
+            function cerrar_sesion() {
+            // Redirigir a login.html
+            window.location.href = "/logout";
+        }
+    </script>
+
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
